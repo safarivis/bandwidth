@@ -880,9 +880,10 @@ def add_initiative(name, area, itype):
     return state
 
 
-def set_wait(key, reason):
-    """Mark a block waiting on {reason} (approval/reply/access/data), or clear ('').
-    Closes any open wait first; timestamps entry/exit for delay tracking."""
+def set_wait(key, reason, since=None):
+    """Mark a block waiting on {reason} (approval/reply/access/data/other), or clear ('').
+    Closes any open wait first. `since` (YYYY-MM-DD) lets a reclassify keep the original
+    start date so the accrued days aren't reset; defaults to today."""
     reason = (reason or "").strip().lower()
     if reason and reason not in WAIT_REASONS:
         return {"ok": False, "error": f"invalid reason '{reason}'"}
@@ -891,7 +892,8 @@ def set_wait(key, reason):
         return {"ok": False, "error": f"unknown initiative '{key}'"}
     status_file = reg.get("status_file") or os.path.join(reg["repo_path"], "project-room", "README.md")
     target = os.path.join(REPO_ROOT, status_file)
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    now = since if (since and re.match(r"^\d{4}-\d{2}-\d{2}$", since)) \
+        else datetime.now(timezone.utc).strftime("%Y-%m-%d")
     content = open(target, errors="ignore").read() if os.path.exists(target) else \
         (f"# {reg.get('name') or key}\n" if reason else "")
     out = []
@@ -1255,7 +1257,7 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path.startswith("/api/add_initiative"):
             self._send(200, add_initiative(payload.get("name"), payload.get("area"), payload.get("type")))
         elif self.path.startswith("/api/set_wait"):
-            self._send(200, set_wait(payload.get("key"), payload.get("reason")))
+            self._send(200, set_wait(payload.get("key"), payload.get("reason"), payload.get("since")))
         elif self.path.startswith("/api/claude/start"):
             self._send(200, claude_start())
         elif self.path.startswith("/api/claude/finish"):

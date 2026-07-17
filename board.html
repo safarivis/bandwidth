@@ -320,8 +320,12 @@ function paintDelays(){
       <div class="rtop"><b>${esc(i.name)}</b> <span class="rcode">${esc(i.code||"")}</span>${o?`<span class="crit-chip">⏳ ${esc(WR[o.reason]||o.reason)} ${o.days}d</span>`:""}</div>
       <div class="rsub">${Object.entries(i.wait.by).map(([r,dd])=>`${esc(WR[r]||r)}: ${dd}d`).join(" · ")} · <b>total ${i.wait.total}d</b></div></div></div>`;}).join("")
     ||'<div class="tiny muted">No delays yet. A delay auto-appears when a UC/NI is blocked (measured from its blocker date), or when you set "Waiting on…" in a block.</div>';
+  const needs=items.filter(i=>i.wait.open&&i.wait.open.reason==="other");
+  const flag=needs.length?`<div class="miss">⚠ ${needs.length} delay${needs.length===1?"":"s"} need a reason — open each and set "Waiting on…": `
+    +needs.map(i=>`<a href="#" onclick='openPanel(${JSON.stringify(i.key)});return false' style="color:var(--txt);font-weight:600">${esc(i.code||i.name)}</a>`).join(", ")+`</div>`:"";
   main.innerHTML=`<div class="report">
-    <p class="tiny muted" style="text-align:center;margin:0 0 18px"><b>${d.count}</b> delayed item${d.count===1?"":"s"} · avg wait <b>${d.avg}d</b>${d.top?` · biggest drag <b>${esc(WR[d.top]||d.top)}</b>`:""}</p>
+    <p class="tiny muted" style="text-align:center;margin:0 0 14px"><b>${d.count}</b> delayed item${d.count===1?"":"s"} · avg wait <b>${d.avg}d</b>${d.top?` · biggest drag <b>${esc(WR[d.top]||d.top)}</b>`:""}</p>
+    ${flag}
     <div class="rsec"><h3>Average wait by cause</h3><div class="delaybars">${bars}</div></div>
     <div class="rsec"><h3>By project (${items.length})</h3>${rows}</div>
   </div>`;
@@ -468,9 +472,9 @@ async function setCriticality(key,level){
   if(d.set_stage_ok){STATE=d;paint();openPanel(key);}
   else alert("⚠️ "+(d.error||"could not update criticality"));
 }
-async function setWait(key,reason){
+async function setWait(key,reason,since){
   const r=await fetch("/api/set_wait",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({key,reason})});
+    body:JSON.stringify({key,reason,since:since||""})});
   const d=await r.json();
   if(d.set_stage_ok){STATE=d;paint();openPanel(key);}
   else alert("⚠️ "+(d.error||"could not update wait"));
@@ -492,7 +496,7 @@ function openPanel(folder){
     +["","critical","high","medium","low"].map(v=>`<option value="${v}" ${(it.criticality||"")===v?"selected":""}>${v?v[0].toUpperCase()+v.slice(1):"— none"}</option>`).join("")
     +`</select></label>`;
   const WR=STATE.wait_reasons||{}, openW=it.wait&&it.wait.open;
-  const waitSel=`<label class="critsel">Waiting on <select onchange="setWait('${it.key}',this.value)">`
+  const waitSel=`<label class="critsel">Waiting on <select onchange="setWait('${it.key}',this.value,${JSON.stringify(openW?openW.since:'')})">`
     +`<option value="">— not waiting</option>`
     +Object.keys(WR).map(r=>`<option value="${r}" ${openW&&openW.reason===r?"selected":""}>${esc(WR[r])}</option>`).join("")
     +`</select></label>`
