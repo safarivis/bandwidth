@@ -23,7 +23,7 @@ git push -q origin main
 echo "→ 2/3 deploy code to instance '$INSTANCE' (per-client config/data untouched)"
 rsync -az --exclude '.git' --exclude '__pycache__' --exclude 'server.log' --exclude 'BOARD.md' \
   --exclude 'data.json' --exclude 'registry.csv' --exclude '*.pyc' --exclude 'data/' \
-  --exclude '.deploy.env' -e "$SSH" ./ "root@$HOST:/srv/bandwidth/$INSTANCE/app/"
+  --exclude '.deploy.env' --exclude 'provision.sh' -e "$SSH" ./ "root@$HOST:/srv/bandwidth/$INSTANCE/app/"
 
 echo "→ 3/3 re-lock framework read-only + restart"
 $SSH "root@$HOST" "chown -R root:root /srv/bandwidth/$INSTANCE/app && chmod -R a+rX /srv/bandwidth/$INSTANCE/app && systemctl restart bandwidth-$INSTANCE && sleep 2 && systemctl is-active bandwidth-$INSTANCE"

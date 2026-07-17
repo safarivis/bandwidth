@@ -164,7 +164,7 @@ $SSH "root@$HOST" "$REMOTE"
 echo "→ 2/5 sync framework code (per-client config untouched)"
 rsync -az --exclude '.git' --exclude '__pycache__' --exclude 'server.log' --exclude 'BOARD.md' \
   --exclude 'data.json' --exclude 'registry.csv' --exclude '*.pyc' --exclude 'data/' \
-  --exclude '.deploy.env' -e "$SSH" ./ "root@$HOST:$BASE/app/"
+  --exclude '.deploy.env' --exclude 'provision.sh' -e "$SSH" ./ "root@$HOST:$BASE/app/"
 
 echo "→ 3/5 seed per-client data.json + lock framework read-only"
 $SSH "root@$HOST" "printf '{\n  \"client\": \"%s\",\n  \"client_dir\": \".\"\n}\n' '$CLIENT' > $BASE/app/data.json \
