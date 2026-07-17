@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Bandwidth
+Comment=Bandwidth — manage every concern from one screen, powered by your AI
+Exec=/home/louisdup/ldp/projects/lewkai/bandwidth/start.sh
+Icon=utilities-system-monitor
+Terminal=false
+Categories=Utility;

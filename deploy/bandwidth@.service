@@ -1,0 +1,15 @@
+[Unit]
+Description=Bandwidth — %i
+After=network.target
+
+[Service]
+User=bandwidth
+# Per-customer config: BOARD_REPO (their synced data repo) + BOARD_PORT (unique per instance)
+EnvironmentFile=/srv/bandwidth/%i/env
+WorkingDirectory=/srv/bandwidth/%i/app
+ExecStart=/usr/bin/python3 server.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

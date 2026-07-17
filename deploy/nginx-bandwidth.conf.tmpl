@@ -1,0 +1,15 @@
+# Bandwidth — nginx site template (one per customer).
+# Replace {{CUSTOMER}} and {{PORT}}; the board has NO built-in auth, so the proxy gates it.
+server {
+    listen 80;
+    server_name {{CUSTOMER}}.bandwidth.lewkai.com;
+
+    location / {
+        auth_basic "Bandwidth";
+        auth_basic_user_file /etc/nginx/bandwidth/{{CUSTOMER}}.htpasswd;   # htpasswd -c ... <user>
+        proxy_pass http://127.0.0.1:{{PORT}};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+# Then: sudo certbot --nginx -d {{CUSTOMER}}.bandwidth.lewkai.com   (adds TLS + 80->443 redirect)

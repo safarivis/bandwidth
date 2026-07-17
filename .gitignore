@@ -1,0 +1,5 @@
+# runtime artifacts
+server.log
+__pycache__/
+BOARD.md
+data/

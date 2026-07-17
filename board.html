@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bandwidth</title>
+<style>
+  :root{
+    --bg:#ffffff; --panel:#ffffff; --panel2:#f5f5f7; --line:#e5e5e7;
+    --txt:#1d1d1f; --dim:#6e6e73; --dimmer:#a1a1a6;
+    --green:#34c759; --amber:#ff9f0a; --red:#ff3b30; --grey:#8e8e93;
+    --accent:#1d1d1f; --accent-fg:#ffffff;
+    --shadow:0 1px 2px rgba(0,0,0,.04),0 4px 12px rgba(0,0,0,.05);
+  }
+  :root[data-theme="dark"]{
+    --bg:#000000; --panel:#1c1c1e; --panel2:#2c2c2e; --line:#38383a;
+    --txt:#f5f5f7; --dim:#98989d; --dimmer:#636366;
+    --green:#30d158; --amber:#ffd60a; --red:#ff453a; --grey:#8e8e93;
+    --accent:#ffffff; --accent-fg:#000000;
+    --shadow:0 1px 2px rgba(0,0,0,.5),0 4px 16px rgba(0,0,0,.5);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;letter-spacing:-0.01em;
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
+    transition:background .3s ease,color .3s ease}
+  header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    padding:13px 22px;border-bottom:1px solid var(--line);background:var(--panel);
+    position:sticky;top:0;z-index:10}
+  header h1{font-size:17px;margin:0;font-weight:600;letter-spacing:-0.02em}
+  header .client{color:var(--dim);font-weight:400}
+  .spacer{flex:1}
+  .search{background:var(--panel2);border:1px solid var(--line);border-radius:980px;color:var(--txt);
+    padding:7px 14px;font:inherit;min-width:200px}
+  .search:focus{outline:none;border-color:var(--accent)}
+  .search::placeholder{color:var(--dimmer)}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;
+    background:var(--panel2);border:1px solid var(--line);font-size:12px;color:var(--dim)}
+  .pill b{color:var(--txt)}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+  .dot.green{background:var(--green)}.dot.amber{background:var(--amber)}
+  .dot.red{background:var(--red)}.dot.grey{background:var(--grey)}
+  button{font:inherit;font-weight:500;cursor:pointer;border:1px solid var(--line);background:var(--panel);
+    color:var(--txt);padding:7px 14px;border-radius:980px;transition:all .15s ease}
+  button:hover{background:var(--panel2)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+  button.primary:hover{background:var(--accent);opacity:.85}
+  .iconbtn{width:34px;height:34px;padding:0;border-radius:980px;border:1px solid var(--line);
+    background:var(--panel);color:var(--txt);font-size:15px;display:inline-flex;align-items:center;justify-content:center}
+  .iconbtn:hover{background:var(--panel2)}
+  .toggle{display:flex;border:1px solid var(--line);border-radius:980px;overflow:hidden;background:var(--panel2)}
+  .toggle button{border:0;border-radius:0;background:transparent;padding:6px 16px}
+  .toggle button.on{background:var(--accent);color:var(--accent-fg)}
+  main{padding:20px}
+  .muted{color:var(--dim)}.tiny{font-size:12px}
+  .warn{color:var(--amber)}
+  .miss{margin:14px 20px 0;padding:10px 14px;border-radius:8px;background:rgba(230,165,58,.14);
+    border:1px solid rgba(230,165,58,.5);color:var(--txt);font-size:13px}
+
+  /* ---- Kanban ---- */
+  .kanban{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;align-items:start}
+  .col h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);
+    margin:0 0 10px;font-weight:600}
+  .card{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--grey);
+    border-radius:12px;padding:12px 14px;margin-bottom:10px;cursor:pointer;box-shadow:var(--shadow);
+    transition:transform .12s ease,box-shadow .12s ease}
+  .card:hover{transform:translateY(-1px)}
+  .card.green{border-left-color:var(--green)}.card.amber{border-left-color:var(--amber)}
+  .card.red{border-left-color:var(--red)}.card.grey{border-left-color:var(--grey)}
+  .card .code{font-size:11px;color:var(--dimmer);font-family:ui-monospace,monospace}
+  .who{font-size:11px;color:var(--dim);margin:1px 0 3px}
+  .card .nm{font-weight:600;margin:2px 0 6px}
+  .card .meta{font-size:12px;color:var(--dim);display:flex;gap:10px;flex-wrap:wrap}
+  .badge{font-size:10px;padding:1px 6px;border-radius:5px;background:var(--panel2);
+    border:1px solid var(--line);color:var(--warn);margin-right:4px}
+
+  /* ---- Funnel ---- */
+  .funnel{display:flex;flex-direction:column;gap:10px;max-width:1100px;margin:0 auto}
+  .band{display:grid;grid-template-columns:130px 1fr;gap:14px;align-items:center;
+    border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--panel)}
+  .band .label{font-size:12px;text-transform:uppercase;letter-spacing:.05em;
+    color:var(--dim);font-weight:700;text-align:right}
+  .band .blocks{display:flex;flex-wrap:wrap;gap:8px}
+  .blk{min-width:120px;max-width:200px;border-radius:8px;padding:8px 10px;cursor:pointer;
+    border:1px solid var(--line);background:var(--panel2)}
+  .blk:hover{outline:2px solid var(--accent)}
+  .blk .code{font-size:10px;font-family:ui-monospace,monospace;opacity:.8}
+  .blk .nm{font-size:12px;font-weight:600;line-height:1.2;margin-top:2px}
+  .blk.green{background:rgba(47,191,113,.16);border-color:rgba(47,191,113,.5)}
+  .blk.amber{background:rgba(230,165,58,.14);border-color:rgba(230,165,58,.45)}
+  .blk.red{background:rgba(229,72,77,.18);border-color:var(--red);
+    animation:pulse 1.8s infinite}
+  .blk.grey{background:var(--panel2)}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(229,72,77,.4)}50%{box-shadow:0 0 0 4px rgba(229,72,77,0)}}
+  .band.live{background:linear-gradient(0deg,rgba(47,191,113,.10),transparent)}
+  .band.live .label{color:var(--green)}
+
+  /* ---- Welcome / onboarding ---- */
+  .welcome{display:flex;justify-content:center;padding:40px 20px}
+  .wcard{max-width:620px;width:100%}
+  .wcard h1{font-size:30px;font-weight:600;letter-spacing:-0.03em;margin:0 0 8px}
+  .wsub{color:var(--dim);font-size:15px;margin:0 0 30px}
+  .wsteps{list-style:none;counter-reset:s;padding:0;margin:0;display:flex;flex-direction:column;gap:16px}
+  .wsteps li{counter-increment:s;position:relative;padding:16px 18px 16px 56px;background:var(--panel);
+    border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+  .wsteps li::before{content:counter(s);position:absolute;left:16px;top:16px;width:26px;height:26px;
+    border-radius:50%;background:var(--accent);color:var(--accent-fg);font-size:13px;font-weight:600;
+    display:flex;align-items:center;justify-content:center}
+  .wsteps li b{display:block;font-size:15px;margin-bottom:3px}
+  .wsteps li span{display:block;color:var(--dim);font-size:13px;line-height:1.5}
+  .wsteps li button{margin-top:12px}
+
+  /* ---- Today / report ---- */
+  .report{max-width:920px;margin:0 auto}
+  .rsec{margin:0 0 26px}
+  .rsec h3{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .rcount{color:var(--dimmer);font-weight:400}
+  .rrow{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);
+    border-left:3px solid var(--grey);border-radius:12px;padding:11px 14px;margin-bottom:8px;box-shadow:var(--shadow)}
+  .rrow.green{border-left-color:var(--green)}.rrow.amber{border-left-color:var(--amber)}
+  .rrow.red{border-left-color:var(--red)}.rrow.grey{border-left-color:var(--grey)}
+  .rmain{flex:1;cursor:pointer;min-width:0}
+  .rtop{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .rcode{font-family:ui-monospace,monospace;font-size:11px;color:var(--dimmer)}
+  .rsub{font-size:12px;color:var(--dim);margin-top:3px}
+  .rbl{color:var(--txt)}
+  .ract{flex-shrink:0}
+  .delaybars{display:flex;flex-direction:column;gap:10px}
+  .dbar{display:grid;grid-template-columns:150px 1fr 48px;align-items:center;gap:10px}
+  .dbl{font-size:13px;color:var(--dim)}
+  .dtrack{background:var(--panel2);border-radius:980px;height:10px;overflow:hidden}
+  .dfill{background:var(--amber);height:100%;border-radius:980px;min-width:2px}
+  .dval{font-size:12px;color:var(--txt);text-align:right}
+  .waitnow{font-size:12px;color:var(--amber);align-self:center}
+
+  /* ---- Detail panel ---- */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none}
+  .overlay.on{display:block}
+  .panel{position:fixed;top:0;right:0;height:100%;width:min(460px,92vw);background:var(--panel);
+    border-left:1px solid var(--line);padding:22px;overflow:auto;transform:translateX(100%);
+    transition:transform .18s ease}
+  .panel.on{transform:none}
+  .modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(520px,92vw);
+    max-height:88vh;overflow:auto;background:var(--panel);border:1px solid var(--line);
+    border-radius:16px;padding:24px 24px 28px;box-shadow:var(--shadow)}
+  .modal h2{margin:.1em 0 .6em;font-size:18px}
+  .cc-url{word-break:break-all;font-size:12px;color:var(--accent)}
+  .panel h2{margin:.2em 0;font-size:18px}
+  .panel .code{font-family:ui-monospace,monospace;color:var(--dimmer);font-size:12px}
+  .row{margin:12px 0;padding-top:12px;border-top:1px solid var(--line)}
+  .row .k{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--dim)}
+  .row .v{margin-top:3px}
+  .why{background:rgba(255,59,48,.08);border:1px solid rgba(255,59,48,.28);border-radius:12px;
+    padding:12px 14px;margin:12px 0}
+  .why-h{font-weight:600;color:var(--red);font-size:11px;letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px}
+  .why-b{font-size:13.5px;line-height:1.5;color:var(--txt)}
+  .why-c{font-size:11px;color:var(--dim);margin-top:8px}
+  .tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px}
+  .tags:empty{display:none}
+  .prio-tag{display:inline-block;background:var(--accent);color:var(--accent-fg);font-size:10px;
+    font-weight:700;letter-spacing:.03em;padding:2px 9px;border-radius:980px}
+  .risk-tag{display:inline-block;background:var(--red);color:#fff;font-size:10px;font-weight:700;
+    padding:2px 9px;border-radius:980px}
+  .crit-chip{display:inline-block;background:var(--panel2);border:1px solid var(--line);color:var(--dim);
+    font-size:10px;font-weight:600;padding:1px 8px;border-radius:980px}
+  .iconbtn.on{background:var(--accent);color:var(--accent-fg)}
+  .pcrow{margin:10px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .critsel{font-size:12px;color:var(--dim);display:inline-flex;align-items:center;gap:6px}
+  .critsel select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;
+    color:var(--txt);padding:5px 8px;font:inherit}
+  .card.prio{box-shadow:0 0 0 2px var(--accent),var(--shadow)}
+  .blk.prio{outline:2px solid var(--accent);outline-offset:1px}
+  .stat{display:inline-flex;align-items:center;gap:5px}
+  button.mini.prio-btn.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+  .actions{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+  .close{position:absolute;top:14px;right:16px;background:none;border:0;font-size:22px;color:var(--dim)}
+  pre.out{white-space:pre-wrap;background:var(--bg);border:1px solid var(--line);border-radius:8px;
+    padding:10px;font-size:12px;max-height:280px;overflow:auto;margin-top:10px}
+  .commits{font-size:11px;color:var(--dim);font-family:ui-monospace,monospace}
+  .commits div{padding:1px 0}
+  .acts{margin:2px 0 0;padding-left:16px;font-size:12px;color:var(--dim)}
+  .acts li{margin:2px 0}
+  .statusrow{display:flex;gap:6px}
+  .statusin{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:6px;
+    color:var(--txt);padding:6px 8px;font:inherit}
+  .statusin:focus{outline:none;border-color:var(--accent)}
+  button.mini{padding:4px 10px;border-radius:6px}
+  .logtime{margin-top:16px;border-top:1px solid var(--line);padding-top:12px}
+  .logrow{display:flex;gap:6px;margin:6px 0}
+  .loghours{width:64px;background:var(--bg);border:1px solid var(--line);border-radius:6px;color:var(--txt);padding:6px 8px;font:inherit}
+  .logtask{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:6px;color:var(--txt);padding:6px 8px;font:inherit}
+  .lognote{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:6px;color:var(--txt);padding:6px 8px;font:inherit;margin-bottom:6px}
+  .loghours:focus,.logtask:focus,.lognote:focus{outline:none;border-color:var(--accent)}
+  .chat{margin-top:18px;border-top:1px solid var(--line);padding-top:14px}
+  .chatlog{max-height:240px;overflow:auto;margin:8px 0;display:flex;flex-direction:column;gap:8px}
+  .msg{font-size:13px;padding:8px 11px;border-radius:12px;background:transparent;border:1px solid var(--line)}
+  .msg.user{background:var(--panel2)}
+  .msg b{color:var(--dim)}
+  .chatrow{display:flex;gap:6px}
+  .chatin{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:7px;
+    color:var(--txt);padding:8px 10px;font:inherit}
+  .chatin:focus{outline:none;border-color:var(--accent)}
+  .card,.blk{position:relative}
+  .acting::after{content:"⏳";position:absolute;top:4px;right:6px;font-size:12px}
+  .acted::after{content:"✓";position:absolute;top:4px;right:6px;font-size:12px;color:var(--green);font-weight:700}
+</style>
+</head>
+<body>
+<header>
+  <button id="themeBtn" class="iconbtn" onclick="toggleTheme()" title="Toggle light / dark">☀</button>
+  <h1>Bandwidth <span class="client" id="client"></span></h1>
+  <div class="toggle">
+    <button id="tToday" onclick="setView('today')">Today</button>
+    <button id="tKanban" class="on" onclick="setView('kanban')">Kanban</button>
+    <button id="tFunnel" onclick="setView('funnel')">Funnel</button>
+    <button id="tDelays" onclick="setView('delays')">Delays</button>
+  </div>
+  <input id="search" class="search" placeholder="Filter — dept · contact · status…" oninput="paint()">
+  <button id="clearSearch" class="iconbtn" title="Clear filter" onclick="document.getElementById('search').value='';paint();">✕</button>
+  <button id="riskBtn" class="iconbtn" title="Show only at-risk (High/Critical + not healthy)" onclick="RISKONLY=!RISKONLY;this.classList.toggle('on',RISKONLY);paint();">🔥</button>
+  <button class="primary" title="Add an initiative" onclick="addInitiative()">＋ Add</button>
+  <span class="pill"><span class="dot green"></span><b id="cGreen">0</b> live</span>
+  <span class="pill"><span class="dot amber"></span><b id="cAmber">0</b> moving</span>
+  <span class="pill"><span class="dot red"></span><b id="cRed">0</b> needs you</span>
+  <span class="pill"><span class="dot grey"></span><b id="cGrey">0</b> unknown</span>
+  <span class="spacer"></span>
+  <span class="pill" id="emailPill">📧 email scan: —</span>
+  <span class="pill" id="genPill">generated —</span>
+  <button onclick="refresh()">↻ Refresh</button>
+  <button onclick="scanEmail()">📧 Scan email now</button>
+  <button class="iconbtn" title="Getting started" onclick="paintWelcome()">?</button>
+</header>
+<div id="banner"></div>
+<main id="main"></main>
+
+<div class="overlay" id="mOverlay" onclick="if(event.target.id==='mOverlay')closeModal()">
+  <div class="modal" id="mModal"><button class="close" onclick="closeModal()">×</button>
+    <h2 id="mTitle"></h2><div id="mBody"></div></div>
+</div>
+
+<div class="overlay" id="overlay" onclick="closePanel(event)">
+  <div class="panel" id="panel" onclick="event.stopPropagation()">
+    <button class="close" onclick="closePanel()">×</button>
+    <div id="panelBody"></div>
+  </div>
+</div>
+
+<script>
+const STAGES=[["ideating","Ideating"],["scoping","Scoping"],["approved","Approved"],
+  ["building","Building"],["testing","Testing"],["live","Live"]];
+const KANBAN=STAGES;   // Kanban columns = the lifecycle stages; red shown by colour
+const STAGEKEYS=STAGES.map(s=>s[0]);
+const HLABEL={green:"Live",amber:"Moving",red:"Needs you",grey:"Unknown"};
+let STATE=null, VIEW=localStorage.getItem("board.view")||"kanban";
+function applyTheme(t){
+  document.documentElement.setAttribute("data-theme",t);
+  localStorage.setItem("board.theme",t);
+  const b=document.getElementById("themeBtn"); if(b) b.textContent = t==="dark" ? "☾" : "☀";
+}
+function toggleTheme(){
+  const cur=document.documentElement.getAttribute("data-theme")==="dark"?"dark":"light";
+  applyTheme(cur==="dark"?"light":"dark");
+}
+applyTheme(localStorage.getItem("board.theme")
+  || (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
+let CURRENT_KEY=null, CHAT={}, ACT={}, RISKONLY=false;   // CHAT: key->[{role,text}]  ACT: key->{busy,ok,out,label}
+
+function esc(s){return (s==null?"":String(s)).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+
+async function load(){
+  const r=await fetch("/api/state"); STATE=await r.json(); paint();
+}
+async function refresh(){
+  const r=await fetch("/api/refresh",{method:"POST"}); STATE=await r.json(); paint();
+}
+function paint(){
+  document.getElementById("client").textContent="· "+(STATE.client||"");
+  const c=STATE.counts;
+  cGreen.textContent=c.green;cAmber.textContent=c.amber;cRed.textContent=c.red;cGrey.textContent=c.grey;
+  genPill.textContent="generated "+(STATE.generated_at||"").replace("T"," ").replace("+00:00"," UTC");
+  const e=STATE.email_scan_age_days;
+  emailPill.textContent="📧 email scan: "+(e==null?"never":e+"d ago");
+  emailPill.className="pill"+(e!=null&&e>7?" warn":"");
+  document.getElementById("tKanban").className=VIEW==="kanban"?"on":"";
+  document.getElementById("tFunnel").className=VIEW==="funnel"?"on":"";
+  document.getElementById("tToday").className=VIEW==="today"?"on":"";
+  document.getElementById("tDelays").className=VIEW==="delays"?"on":"";
+  const mc=STATE.missing_codes||[];
+  document.getElementById("banner").innerHTML = mc.length
+    ? `<div class="miss">⚠ ${mc.length} project(s) found in the repo but not on the board — add to registry.csv: `
+      + mc.map(m=>`<b>${esc(m.code)}</b>`).join(", ") + `</div>` : "";
+  if(!(STATE.items&&STATE.items.length)){ paintWelcome(); return; }
+  if(VIEW==="today") paintToday(); else if(VIEW==="funnel") paintFunnel();
+  else if(VIEW==="delays") paintDelays(); else paintKanban();
+}
+function paintDelays(){
+  const d=STATE.delays||{by:{},total:0}, WR=STATE.wait_reasons||{};
+  const max=Math.max(1,...Object.values(d.by||{}));
+  const bars=Object.keys(WR).map(r=>{const v=(d.by||{})[r]||0;
+    return `<div class="dbar"><div class="dbl">${esc(WR[r])}</div><div class="dtrack"><div class="dfill" style="width:${Math.round(v/max*100)}%"></div></div><div class="dval">${v}d</div></div>`;}).join("");
+  const items=shownItems().filter(i=>i.wait&&i.wait.total>0).sort((a,b)=>(b.wait.total||0)-(a.wait.total||0));
+  const rows=items.map(i=>{const o=i.wait.open;
+    return `<div class="rrow ${i.health}" data-k="${esc(i.key)}"><div class="rmain" onclick='openPanel(${JSON.stringify(i.key)})'>
+      <div class="rtop"><b>${esc(i.name)}</b> <span class="rcode">${esc(i.code||"")}</span>${o?`<span class="crit-chip">⏳ ${esc(WR[o.reason]||o.reason)} ${o.days}d</span>`:""}</div>
+      <div class="rsub">${Object.entries(i.wait.by).map(([r,dd])=>`${esc(WR[r]||r)}: ${dd}d`).join(" · ")} · <b>total ${i.wait.total}d</b></div></div></div>`;}).join("")
+    ||'<div class="tiny muted">No waiting time recorded yet. Open a block and set "Waiting on…" to start measuring delays.</div>';
+  main.innerHTML=`<div class="report">
+    <p class="tiny muted" style="text-align:center;margin:0 0 18px">Where time goes — <b>${d.total}d</b> waiting total${d.top?`, most on <b>${esc(WR[d.top]||d.top)}</b>`:""}.</p>
+    <div class="rsec"><h3>Time lost by cause</h3><div class="delaybars">${bars}</div></div>
+    <div class="rsec"><h3>By project</h3>${rows}</div>
+  </div>`;
+  applyActMarkers();
+}
+function paintWelcome(){
+  main.innerHTML=`<div class="welcome"><div class="wcard">
+    <h1>Welcome to Bandwidth</h1>
+    <p class="wsub">One screen for every concern — so you can leverage AI to do more with less. About three minutes to set up.</p>
+    <ol class="wsteps">
+      <li><b>Connect your Claude</b><span>So Bandwidth can draft, resolve and act for you — on your own Claude subscription. One-time.</span><button class="primary" onclick="connectClaude()">Connect Claude</button></li>
+      <li><b>Add what's on your plate</b><span>Projects, tasks, the things you're carrying. Name each one and pick an area — Personal, Work, Business, Health…</span><button class="primary" onclick="addInitiative()">＋ Add your first</button></li>
+      <li><b>Organise it</b><span>Drag each block to its stage. Star ★ what matters now. Set Criticality on the ones that would hurt if they slipped.</span></li>
+      <li><b>Run your day</b><span>Each morning open <b>Today</b> — your priorities, bottlenecks and who you're waiting on, each with a one-click action.</span></li>
+    </ol>
+  </div></div>`;
+}
+function setView(v){VIEW=v;localStorage.setItem("board.view",v);paint();}
+
+function matchQuery(it){
+  const q=(document.getElementById("search")?.value||"").trim().toLowerCase();
+  if(!q) return true;
+  const hay=[it.code,it.name,it.contact,it.sponsor,it.dept,it.stage,it.health,it.type,(it.flags||[]).join(" ")]
+    .filter(Boolean).join(" ").toLowerCase();
+  return q.split(/\s+/).every(term=>hay.includes(term));
+}
+function atRiskBroad(it){ return (it.criticality==="critical"||it.criticality==="high") && it.health!=="green"; }
+function shownItems(){ return (STATE.items||[]).filter(it=>matchQuery(it) && (!RISKONLY || atRiskBroad(it))); }
+function bucket(it){ return funnelStage(it); } // kanban column = its stage; red shows by colour
+function paintKanban(){
+  const cols=KANBAN.map(([k,t])=>{
+    const items=shownItems().filter(i=>bucket(i)===k);
+    return `<div class="col"><h3>${t} (${items.length})</h3>${items.map(cardHTML).join("")}</div>`;
+  }).join("");
+  main.innerHTML=`<div class="kanban">${cols}</div>`;
+  applyActMarkers();
+}
+function cardHTML(it){
+  const flags=(it.flags||[]).map(f=>`<span class="badge">⚠ ${f}</span>`).join("");
+  const days=it.days_since_movement;
+  return `<div class="card ${it.health}${it.priority?' prio':''}" data-k="${esc(it.key)}" onclick='openPanel(${JSON.stringify(it.key)})'>
+    <div class="tags">${it.priority?'<span class="prio-tag">★ Priority</span>':''}${it.at_risk?'<span class="risk-tag">🔥 At risk</span>':((it.criticality==='critical'||it.criticality==='high')?`<span class="crit-chip">${it.criticality==='critical'?'Critical':'High'}</span>`:'')}</div>
+    <div class="code">${esc(it.code||it.type||"")}</div>
+    <div class="who">${esc(it.contact||"—")}</div>
+    <div class="nm">${esc(it.name)}</div>
+    <div class="meta">
+      <span class="stat"><span class="dot ${it.health}"></span>${HLABEL[it.health]||""}</span>
+      <span>${days==null?"":"⏱ "+days+"d"}</span>
+    </div>${flags?`<div style="margin-top:6px">${flags}</div>`:""}
+  </div>`;
+}
+function funnelStage(it){ // unknown/grey items land in Ideating band
+  return STAGEKEYS.includes(it.stage)?it.stage:"ideating";
+}
+function paintFunnel(){
+  // Render top->bottom = ideating -> live (STAGES order), so Live is the green foundation at the BOTTOM.
+  const bands=STAGES.map(([k,t])=>{
+    const items=shownItems().filter(i=>funnelStage(i)===k);
+    const blocks=items.map(it=>`<div class="blk ${it.health}${it.priority?' prio':''}" draggable="true" data-k="${esc(it.key)}"
+        ondragstart='dragStart(event,${JSON.stringify(it.key)})'
+        onclick='openPanel(${JSON.stringify(it.key)})'>
+        <div class="code">${it.priority?'★ ':''}${esc(it.code||it.type||"")}</div>
+        <div class="who">${esc(it.contact||"—")}</div>
+        <div class="nm">${esc(it.name)}</div></div>`).join("")||`<span class="tiny muted">drop here</span>`;
+    return `<div class="band ${k}" data-stage="${k}"
+        ondragover='event.preventDefault()' ondrop='drop(event,"${k}")'>
+        <div class="label">${t}</div><div class="blocks">${blocks}</div></div>`;
+  }).join("");
+  main.innerHTML=`<div class="funnel">${bands}</div>
+    <p class="tiny muted" style="text-align:center;margin-top:14px">
+    Top = ideas · bottom = live agents (green foundation). Red pulses = needs you.
+    <b>Drag a block to another band to reclassify it</b> — that rewrites its room Status and sticks.</p>`;
+  applyActMarkers();
+}
+// ---- Today / report view ----
+function isAwaiting(it){
+  const b=(it.blocker||"").toLowerCase();
+  return /await|waiting|\bsent\b|reply|confirm|chase|response|revert|come back|feedback/.test(b);
+}
+function reportRow(it){
+  const bl=it.blocker?cleanBlocker(it.blocker):null;
+  return `<div class="rrow ${it.health}" data-k="${esc(it.key)}">
+    <div class="rmain" onclick='openPanel(${JSON.stringify(it.key)})'>
+      <div class="rtop"><span class="dot ${it.health}"></span> <b>${esc(it.name)}</b>
+        <span class="rcode">${esc(it.code||"")}</span>
+        ${it.priority?'<span class="prio-tag">★</span>':""}${it.at_risk?'<span class="risk-tag">🔥</span>':""}</div>
+      <div class="rsub">${esc(it.contact||"—")}${bl?` · <span class="rbl">${esc(bl.text)}</span>`:""}${bl&&bl.date?` <span class="muted tiny">(since ${bl.date})</span>`:""}</div>
+    </div>
+    <div class="ract"><button class="mini" onclick="openPanel('${it.key}');act('${it.key}','draft_chase')">✉️ Draft</button></div>
+  </div>`;
+}
+function section(title,items,empty){
+  return `<div class="rsec"><h3>${title} <span class="rcount">${items.length}</span></h3>${
+    items.length?items.map(reportRow).join(""):`<div class="tiny muted">${empty}</div>`}</div>`;
+}
+function paintToday(){
+  const items=shownItems();
+  const prio=items.filter(i=>i.priority);
+  const risk=items.filter(i=>!i.priority && (i.at_risk || i.health==="red")).sort((a,b)=>(b.risk||0)-(a.risk||0));
+  const awaiting=items.filter(i=>isAwaiting(i));
+  main.innerHTML=`<div class="report">
+    <p class="tiny muted" style="text-align:center;margin:0 0 18px">Your day at a glance. Click a row to open it · ✉️ Draft creates a context-aware, house-style chase.</p>
+    ${section("★ Priorities", prio, "Nothing flagged priority.")}
+    ${section("🔴 Needs you · bottlenecks", risk, "No red or at-risk items right now. 🎉")}
+    ${section("⏳ Awaiting replies", awaiting, "Nothing flagged as awaiting a reply.")}
+  </div>`;
+  applyActMarkers();
+}
+let DRAG=null;
+function dragStart(e,folder){DRAG=folder;e.dataTransfer.effectAllowed="move";}
+async function drop(e,stage){
+  e.preventDefault();
+  if(!DRAG)return; const folder=DRAG; DRAG=null;
+  if(funnelStage(STATE.items.find(i=>i.key===folder))===stage)return; // no-op
+  const r=await fetch("/api/set_stage",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({key:folder,stage})});
+  const d=await r.json();
+  if(d.set_stage_ok){STATE=d;paint();}
+  else alert("⚠️ "+(d.error||"could not move"));
+}
+
+function cleanBlocker(raw){
+  const parts=String(raw||"").split("|").map(s=>s.trim()).filter(Boolean);
+  const date=(parts.find(p=>/^\d{4}-\d{2}-\d{2}$/.test(p))||"");
+  let body=parts.filter(p=>p!==date && p.length>10).join(" ")
+    .replace(/\*\*/g,"").replace(/`/g,"").replace(/\s+/g," ").trim();
+  body=body.replace(/^(UC-\d{3,4}|NI-[A-Z]{2,3}-\d{3})\s*[—-]\s*/i,""); // drop leading code (already shown)
+  let first=body.split(/(?:\.\s|;\s)/)[0].trim();                       // essence = first clause only
+  if(first) first=first.charAt(0).toUpperCase()+first.slice(1);
+  if(first.length>120) first=first.slice(0,120).trim()+"…";
+  return {date, text:first||body||String(raw||"")};
+}
+async function setPriority(key,on){
+  const r=await fetch("/api/set_priority",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({key,on})});
+  const d=await r.json();
+  if(d.set_stage_ok){STATE=d;paint();openPanel(key);}
+  else alert("⚠️ "+(d.error||"could not update priority"));
+}
+async function setCriticality(key,level){
+  const r=await fetch("/api/set_criticality",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({key,level})});
+  const d=await r.json();
+  if(d.set_stage_ok){STATE=d;paint();openPanel(key);}
+  else alert("⚠️ "+(d.error||"could not update criticality"));
+}
+async function setWait(key,reason){
+  const r=await fetch("/api/set_wait",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({key,reason})});
+  const d=await r.json();
+  if(d.set_stage_ok){STATE=d;paint();openPanel(key);}
+  else alert("⚠️ "+(d.error||"could not update wait"));
+}
+function openPanel(folder){
+  const it=STATE.items.find(i=>i.key===folder); if(!it)return;
+  CURRENT_KEY=it.key;
+  const flags=(it.flags||[]).map(f=>`<span class="badge">⚠ ${f}</span>`).join(" ");
+  let why="";
+  if(it.health==="red"){
+    let body="Flagged.", cap="";
+    if(it.blocker){ const c=cleanBlocker(it.blocker); body=c.text; cap=(c.date?`flagged ${c.date} · `:"")+"from ACTION-ITEMS — verify"; }
+    else if(it.loop_health==="fail"){ body="Live agent is FAILING (LOOP_HEALTH)."; cap="from loop-verify"; }
+    else if((it.flags||[]).includes("stale-movement")){ body=`No git movement in ${it.days_since_movement} days — stalled.`; cap="from git history"; }
+    why=`<div class="why"><div class="why-h">🔴 Why it's red</div><div class="why-b">${esc(body)}</div>${cap?`<div class="why-c">${esc(cap)}</div>`:""}</div>`;
+  }
+  const prioBtn=`<button class="mini prio-btn${it.priority?' on':''}" onclick="setPriority('${it.key}',${it.priority?'false':'true'})">${it.priority?'★ Priority — click to clear':'☆ Mark as priority'}</button>`;
+  const critSel=`<label class="critsel">Criticality <select onchange="setCriticality('${it.key}',this.value)">`
+    +["","critical","high","medium","low"].map(v=>`<option value="${v}" ${(it.criticality||"")===v?"selected":""}>${v?v[0].toUpperCase()+v.slice(1):"— none"}</option>`).join("")
+    +`</select></label>`;
+  const WR=STATE.wait_reasons||{}, openW=it.wait&&it.wait.open;
+  const waitSel=`<label class="critsel">Waiting on <select onchange="setWait('${it.key}',this.value)">`
+    +`<option value="">— not waiting</option>`
+    +Object.keys(WR).map(r=>`<option value="${r}" ${openW&&openW.reason===r?"selected":""}>${esc(WR[r])}</option>`).join("")
+    +`</select></label>`
+    +(openW?`<span class="waitnow">⏳ ${esc(WR[openW.reason]||openW.reason)} — ${openW.days}d</span>`:"");
+  const commits=(it.recent_commits||[]).map(c=>`<div>${esc(c)}</div>`).join("")||'<span class="muted">no commits found</span>';
+  const btns=[];
+  if(it.health==="red"&&it.stage==="live") btns.push(`<button class="primary" onclick="act('${it.key}','resolve_agent',this)">🔧 Resolve / restart agent</button>`);
+  btns.push(`<button onclick="act('${it.key}','draft_chase',this)">✉️ Draft email (draft only)</button>`);
+  if((it.type==="NI")||String(it.code||"").startsWith("NI-")) btns.push(`<button onclick="regRow('${it.key}')">📋 Register row (copy + save stub)</button>`);
+  if(["scoping","approved","building","testing"].includes(it.stage)) btns.push(`<button onclick="act('${it.key}','next_step',this)">▶️ Do next build step</button>`);
+  document.getElementById("panelBody").innerHTML=`
+    <div class="code">${esc(it.code||"")} · ${esc(it.type||"")} · <span class="dot ${it.health}"></span> ${it.health}</div>
+    <h2>${esc(it.name)}</h2>
+    ${flags?`<div>${flags}</div>`:""}
+    <div class="pcrow">${prioBtn}${critSel}${waitSel}</div>
+    ${why}
+    ${(it.wait&&it.wait.total>0)?`<div class="row"><div class="k">Time waited</div><div class="v">${Object.entries(it.wait.by).map(([r,dd])=>`${esc(WR[r]||r)}: ${dd}d`).join(" · ")} <b>(total ${it.wait.total}d)</b></div></div>`:""}
+    <div class="row"><div class="k">What it does</div><div class="v">${esc(it.what_it_does||"—")}</div></div>
+    <div class="row"><div class="k">Why it matters</div><div class="v">${esc(it.why_it_matters||"—")}</div></div>
+    <div class="row"><div class="k">Sponsor</div><div class="v">${esc(it.sponsor||"—")}</div></div>
+    <div class="row"><div class="k">Stage · status <span class="tiny muted">— editable, you type the truth</span></div>
+      <div class="v">
+        <div class="statusrow">
+          <input id="statusEdit" class="statusin" value="${esc(it.status_text||'')}" placeholder="e.g. building — waiting on Ricardo PO">
+          <button class="mini" onclick="saveStatus()">Save</button>
+        </div>
+        <div class="tiny muted">stage reads from the first word (scoping / building / live …). Now: <b>${esc(it.stage)}</b></div>
+        <div id="statusMsg" class="tiny"></div>
+      </div></div>
+    <div class="row"><div class="k">Movement</div><div class="v">${it.days_since_movement==null?"unknown":it.days_since_movement+" days since last commit"}
+      <div class="commits">${commits}</div></div></div>
+    ${(it.activity&&it.activity.length)?`<div class="row"><div class="k">Recent board activity</div><div class="v"><ul class="acts">${it.activity.slice().reverse().map(a=>`<li>${esc(a)}</li>`).join("")}</ul></div></div>`:""}
+    <div class="actions">${btns.join("")||'<span class="muted tiny">No actions for this state.</span>'}</div>
+    <div id="actOut"></div>
+    <div class="logtime">
+      <div class="k">⏱ Log time to this block</div>
+      <div class="logrow">
+        <input id="logHours" class="loghours" type="number" step="0.25" min="0" placeholder="hrs">
+        <select id="logTask" class="logtask">${(STATE.crm_tasks||[]).map(t=>`<option value="${esc(t.id)}">${esc(t.name)}</option>`).join("")}</select>
+        <button class="primary" onclick="logTime('${it.key}')">Log</button>
+      </div>
+      <input id="logNote" class="lognote" placeholder="what you did (1 line)" value="${esc((it.code||it.name)+' — ')}">
+      <div id="logOut" class="tiny"></div>
+      <div class="tiny muted">Logs to CRM + client file + workspace timelog + Lewkai sheet.</div>
+    </div>
+    <div class="chat">
+      <div class="k">💬 Chat with Claude about this block</div>
+      <div id="chatLog" class="chatlog"></div>
+      <div class="chatrow">
+        <input id="chatIn" class="chatin" placeholder="Ask about ${esc(it.code||it.name)}…" onkeydown="if(event.key==='Enter')sendChat()">
+        <button class="primary" onclick="sendChat()">Send</button>
+      </div>
+      <div class="tiny muted">Claude can read + edit files to help — it can't push to git or send email.</div>
+    </div>`;
+  renderChat();
+  renderActOut(CURRENT_KEY);
+  document.getElementById("overlay").classList.add("on");
+  requestAnimationFrame(()=>document.getElementById("panel").classList.add("on"));
+}
+function closePanel(e){if(e&&e.target.id!=="overlay"&&e.type==="click"&&e.currentTarget.id!=="overlay"){}
+  document.getElementById("panel").classList.remove("on");
+  setTimeout(()=>document.getElementById("overlay").classList.remove("on"),160);}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closePanel();});
+
+// Actions run in the BACKGROUND, tracked per block, so you can switch blocks while
+// Claude Code works and find the result waiting when you come back.
+function renderActOut(key){
+  const out=document.getElementById("actOut"); if(!out)return;
+  const a=ACT[key];
+  if(!a){out.innerHTML=""; return;}
+  out.innerHTML = a.busy
+    ? `<pre class="out">⏳ ${esc(a.label)} running (Claude Code)… you can switch to another block; the result will be here when you return.</pre>`
+    : `<pre class="out">${a.ok?"✅":"⚠️"} ${esc(a.out||"(no output)")}</pre>`;
+}
+function applyActMarkers(){
+  Object.keys(ACT).forEach(k=>document.querySelectorAll('[data-k="'+CSS.escape(k)+'"]').forEach(el=>{
+    el.classList.toggle('acting', !!ACT[k].busy);
+    el.classList.toggle('acted', !ACT[k].busy && ACT[k].out!=null);
+  }));
+}
+async function act(key,action,btn){
+  let extra=null;
+  if(action==='draft_chase'){
+    extra=prompt("In one line — what should this email achieve?\n(e.g. \"chase Ronelle to confirm the recon-month rule\")\n\nI'll read this block's project room + recent emails on the topic before drafting, so keep it short.");
+    if(extra===null) return;   // cancelled
+  }
+  ACT[key]={busy:true, label:action.replace(/_/g,' '), out:null};
+  if(CURRENT_KEY===key) renderActOut(key);
+  applyActMarkers();
+  try{
+    const r=await fetch("/api/act",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({code:key,action,extra})});
+    const d=await r.json();
+    ACT[key]={busy:false, ok:d.ok, out:d.output||d.error||"(no output)", label:action.replace(/_/g,' ')};
+  }catch(err){ ACT[key]={busy:false, ok:false, out:String(err), label:action}; }
+  applyActMarkers();
+  if(CURRENT_KEY===key) renderActOut(key);
+}
+async function logTime(key){
+  const hours=document.getElementById("logHours").value;
+  const task_id=document.getElementById("logTask").value;
+  const note=document.getElementById("logNote").value;
+  const out=document.getElementById("logOut");
+  if(!hours||Number(hours)<=0){out.innerHTML='⚠️ enter hours';return;}
+  const taskName=document.getElementById("logTask").selectedOptions[0].text;
+  if(!confirm(`Log ${hours}h to "${taskName}"?\nWrites to CRM + local logs + Lewkai sheet.`))return;
+  out.innerHTML='⏳ logging…';
+  try{
+    const r=await fetch("/api/log_time",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({key,hours,note,task_id})});
+    const d=await r.json();
+    if(d.ok){ out.innerHTML=`✅ Logged ${d.hours}h · ${esc(d.task)} · CRM id ${esc(d.crm_id||"")}<br>done: ${d.done.join(", ")}`;
+      document.getElementById("logHours").value=""; }
+    else if(d.crm_id){ out.innerHTML=`⚠️ CRM logged (id ${esc(d.crm_id)}) but some steps failed — <b>do NOT click Log again</b> (would double-bill).<br>done: ${(d.done||[]).join(", ")}<br>redo: <pre class="out">${esc((d.failed||[]).join("\n"))}</pre>`; }
+    else out.innerHTML=`⚠️ ${esc(d.error||"failed — safe to retry")}`;
+  }catch(err){out.innerHTML=`⚠️ ${esc(err)} — safe to retry`;}
+}
+async function regRow(key){
+  ACT[key]={busy:true,label:"register row",out:null}; if(CURRENT_KEY===key)renderActOut(key);
+  const r=await fetch("/api/register_row",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key})});
+  const d=await r.json();
+  if(d.ok){ try{await navigator.clipboard.writeText(d.text);}catch(e){}
+    ACT[key]={busy:false,ok:true,out:"📋 Copied register row to clipboard"+(d.wrote?("\n💾 saved stub: "+d.wrote):"")+"\n\n"+d.text};
+  } else ACT[key]={busy:false,ok:false,out:d.error||"failed"};
+  if(CURRENT_KEY===key)renderActOut(key);
+}
+function showModal(title,html){document.getElementById("mTitle").textContent=title;
+  document.getElementById("mBody").innerHTML=html;document.getElementById("mOverlay").classList.add("on");}
+function closeModal(){document.getElementById("mOverlay").classList.remove("on");}
+async function connectClaude(){
+  showModal("Connect your Claude","<p class='tiny muted'>Starting… this can take a few seconds.</p>");
+  const r=await fetch("/api/claude/start",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});
+  const d=await r.json();
+  if(!d.ok){showModal("Connect your Claude",`<pre class="out">⚠️ ${esc(d.error||"could not start")}</pre>`);return;}
+  const url=d.url;
+  showModal("Connect your Claude",`
+    <p><b>1.</b> Open this link, sign in with your Claude account, and authorize:</p>
+    ${url?`<p><a href="${esc(url)}" target="_blank" rel="noopener" class="cc-url">${esc(url)}</a></p>`
+         :`<p class="tiny muted">Link not auto-detected — find the URL in the output below and open it.</p><pre class="out">${esc(d.output||"")}</pre>`}
+    <p><b>2.</b> Paste the code it gives you:</p>
+    <div class="chatrow"><input id="ccCode" class="chatin" placeholder="paste code here"><button class="primary" onclick="finishClaude()">Finish</button></div>
+    <div id="ccOut" class="tiny" style="margin-top:8px"></div>`);
+}
+async function finishClaude(){
+  const code=document.getElementById("ccCode").value;
+  document.getElementById("ccOut").textContent="connecting…";
+  const r=await fetch("/api/claude/finish",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code})});
+  const d=await r.json();
+  document.getElementById("ccOut").innerHTML = d.ok
+    ? "✅ Claude connected — your action buttons are live."
+    : `⚠️ Not connected yet.<pre class="out">${esc(d.output||d.error||"")}</pre>`;
+}
+async function addInitiative(){
+  const name=prompt("New item — what's the concern / project / task?"); if(!name)return;
+  const area=prompt("Which area? (e.g. Personal, Work, Business, Health)","Work"); if(area===null)return;
+  const r=await fetch("/api/add_initiative",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({name,area})});
+  const d=await r.json();
+  if(d.set_stage_ok){STATE=d;paint();} else alert("⚠️ "+(d.error||"could not add"));
+}
+async function saveStatus(){
+  const inp=document.getElementById("statusEdit"), msg=document.getElementById("statusMsg");
+  const text=inp.value.trim();
+  msg.textContent="saving…";
+  const r=await fetch("/api/set_status",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({key:CURRENT_KEY,text})});
+  const d=await r.json();
+  if(d.set_stage_ok){STATE=d; const k=CURRENT_KEY; paint(); openPanel(k);
+    document.getElementById("statusMsg").textContent="✅ saved to the file";}
+  else msg.textContent="⚠️ "+(d.error||"could not save");
+}
+function renderChat(){
+  const log=document.getElementById("chatLog"); if(!log)return;
+  const hist=CHAT[CURRENT_KEY]||[];
+  log.innerHTML=hist.map(m=>`<div class="msg ${m.role}"><b>${m.role==="user"?"You":"Claude"}:</b> ${esc(m.text)}</div>`).join("")
+    ||'<div class="tiny muted">No messages yet. Ask a question about this block.</div>';
+  log.scrollTop=log.scrollHeight;
+}
+async function sendChat(){
+  const inp=document.getElementById("chatIn"); const message=inp.value.trim(); if(!message)return;
+  const key=CURRENT_KEY;
+  CHAT[key]=CHAT[key]||[]; CHAT[key].push({role:"user",text:message}); inp.value=""; renderChat();
+  CHAT[key].push({role:"assistant",text:"⏳ thinking…"}); renderChat();
+  try{
+    const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({key,message,history:CHAT[key].slice(0,-2)})});
+    const d=await r.json();
+    CHAT[key].pop(); // remove thinking
+    CHAT[key].push({role:"assistant",text:d.ok?(d.reply||"(no reply)"):("⚠️ "+(d.error||"failed"))});
+  }catch(err){CHAT[key].pop();CHAT[key].push({role:"assistant",text:"⚠️ "+err});}
+  if(CURRENT_KEY===key) renderChat();
+}
+async function scanEmail(){
+  const ok=confirm("Run the gmail-inbound-scan skill for Hungry Lion? It updates ACTION-ITEMS and creates a draft digest only (sends nothing).");
+  if(!ok)return;
+  const r=await fetch("/api/act",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({code:"_email",action:"scan_email"})});
+  const d=await r.json(); alert((d.ok?"✅ ":"⚠️ ")+(d.output||d.error||"done")); refresh();
+}
+load();
+</script>
+</body>
+</html>

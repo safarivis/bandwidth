@@ -1,0 +1,6 @@
+{
+  "client": "New Client",
+  "repo_root": "./data",
+  "client_dir": ".",
+  "note": "Product template. Per deployment: set client, and point repo_root at THIS client's data dir (env BOARD_REPO wins on hosted instances). Fill registry.csv with this client's initiatives; the board creates/manages status files under repo_root. No other client's data belongs in an instance."
+}
