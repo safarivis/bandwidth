@@ -200,6 +200,17 @@
   .chatin{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:7px;
     color:var(--txt);padding:8px 10px;font:inherit}
   .chatin:focus{outline:none;border-color:var(--accent)}
+  /* ---- Add-item modal ---- */
+  .fld{margin:2px 0 16px}
+  .fld label{display:block;font-size:12px;color:var(--dim);margin:0 0 7px}
+  .addin{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:9px;
+    color:var(--txt);padding:11px 12px;font:inherit;font-size:15px}
+  .addin:focus{outline:none;border-color:var(--accent)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{padding:6px 13px;border-radius:980px;border:1px solid var(--line);background:var(--panel);
+    color:var(--dim);font-size:13px;cursor:pointer;transition:all .15s ease}
+  .chip:hover{background:var(--panel2)}
+  .chip.sel{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
   .card,.blk{position:relative}
   .acting::after{content:"⏳";position:absolute;top:4px;right:6px;font-size:12px}
   .acted::after{content:"✓";position:absolute;top:4px;right:6px;font-size:12px;color:var(--green);font-weight:700}
@@ -629,13 +640,30 @@ async function finishClaude(){
     ? "✅ Claude connected — your action buttons are live."
     : `⚠️ Not connected yet.<pre class="out">${esc(d.output||d.error||"")}</pre>`;
 }
-async function addInitiative(){
-  const name=prompt("New item — what's the concern / project / task?"); if(!name)return;
-  const area=prompt("Which area? (e.g. Personal, Work, Business, Health)","Work"); if(area===null)return;
+const ADD_AREAS=["Personal","Work","Business","Health"];
+let ADD_AREA="Work";
+function addInitiative(){
+  ADD_AREA="Work";
+  const chips=ADD_AREAS.map(a=>`<span class="chip${a===ADD_AREA?' sel':''}" onclick="pickArea(this,'${a}')">${a}</span>`).join("");
+  showModal("Add to your plate",`
+    <div class="fld"><label>What is it? — a project, task or concern</label>
+      <input id="addName" class="addin" placeholder="e.g. Website relaunch" autofocus
+        onkeydown="if(event.key==='Enter')submitAdd()"></div>
+    <div class="fld"><label>Which area?</label><div class="chips" id="addChips">${chips}</div></div>
+    <div class="chatrow" style="justify-content:flex-end"><button class="primary" onclick="submitAdd()">Add</button></div>
+    <div id="addOut" class="tiny" style="margin-top:8px"></div>`);
+  setTimeout(()=>document.getElementById("addName")?.focus(),40);
+}
+function pickArea(el,a){ADD_AREA=a;document.querySelectorAll("#addChips .chip").forEach(c=>c.classList.remove("sel"));el.classList.add("sel");}
+async function submitAdd(){
+  const name=(document.getElementById("addName")?.value||"").trim();
+  const out=document.getElementById("addOut");
+  if(!name){out.textContent="Give it a name first.";return;}
+  out.textContent="adding…";
   const r=await fetch("/api/add_initiative",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({name,area})});
+    body:JSON.stringify({name,area:ADD_AREA})});
   const d=await r.json();
-  if(d.set_stage_ok){STATE=d;paint();} else alert("⚠️ "+(d.error||"could not add"));
+  if(d.set_stage_ok){STATE=d;closeModal();paint();} else out.innerHTML="⚠️ "+esc(d.error||"could not add");
 }
 async function saveStatus(){
   const inp=document.getElementById("statusEdit"), msg=document.getElementById("statusMsg");

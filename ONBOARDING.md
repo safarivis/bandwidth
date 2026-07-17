@@ -5,7 +5,14 @@ Two parts: **A. Operator setup** (you, per new client) and **B. Client first-run
 ---
 
 ## A. Operator setup (per client `<name>`)
-Follow `deploy/README.md` to stand up the instance (user `bw-<name>`, sandboxed service, subdomain, TLS, basic-auth). Then connect **their** Claude so actions run on *their* subscription:
+One command stands up the whole instance (isolated `bw-<name>` user, sandboxed service, subdomain, basic-auth, TLS, seeded empty registry) — run it locally; it drives the VPS over SSH like `ship.sh`:
+
+```sh
+./provision.sh <name>            # prompts for a basic-auth password; auto-picks a free port
+./provision.sh <name> --dry-run  # print every action, touch nothing
+```
+
+It refuses if `<name>` already exists (no clobber) and never touches other clients. `deploy/README.md` documents the same steps by hand if you ever need them. Then connect **their** Claude so actions run on *their* subscription:
 
 ```sh
 ssh -i ~/.ssh/lewkai_deploy root@<box-ip>

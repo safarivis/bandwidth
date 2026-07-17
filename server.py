@@ -27,7 +27,10 @@ import csv
 import glob
 import pty
 import time
+import fcntl
+import struct
 import select
+import termios
 import subprocess
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -1119,6 +1122,14 @@ def _cc_kill():
 def claude_start():
     _cc_kill()
     master, slave = pty.openpty()
+    # Widen the pty to 1000 cols BEFORE spawning: the OAuth URL (~340 chars) and,
+    # later, the token both print on a terminal that wraps at its width. At the
+    # default 80 cols they break across lines and the URL/token gets truncated at
+    # the first newline. A wide window keeps each on a single line so parsing is clean.
+    try:
+        fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 50, 1000, 0, 0))
+    except Exception:
+        pass
     try:
         p = subprocess.Popen(["claude", "setup-token"], stdin=slave, stdout=slave,
                              stderr=slave, cwd=REPO_ROOT, close_fds=True)
@@ -1127,7 +1138,12 @@ def claude_start():
         return {"ok": False, "error": "claude CLI not found on this instance"}
     os.close(slave)
     _cc.update({"proc": p, "master": master})
-    out = _cc_read(15)
+    # The URL appears only after a "Opening browser…" spinner, so poll a few times.
+    out = ""
+    for _ in range(4):
+        out += _cc_read(12)
+        if re.search(r"https?://\S+", _cc_clean(out)):
+            break
     m = re.search(r"https?://\S+", _cc_clean(out))
     return {"ok": True, "url": (m.group(0).rstrip(").,]") if m else None),
             "output": _cc_clean(out)[-1600:]}
@@ -1141,10 +1157,11 @@ def claude_finish(code):
     except OSError as e:
         return {"ok": False, "error": str(e)}
     out = _cc_clean(_cc_read(25))
-    # setup-token prints the token; grab it (it wraps across lines) up to the "Store this"/
-    # "Use this token" note, then strip whitespace back to the raw token.
-    m = re.search(r"sk-ant-oat[\s\S]*?(?=Store this|Use this token|$)", out)
-    tok = re.sub(r"[^A-Za-z0-9_\-]", "", m.group(0)) if m else ""
+    # setup-token prints the token on success. With the wide pty it stays on one
+    # line, so match the token shape directly (sk-ant-oat… + url-safe base64 chars)
+    # and stop at the first non-token char (space / box border / newline).
+    m = re.search(r"sk-ant-oat[A-Za-z0-9_\-]+", out)
+    tok = m.group(0) if m else ""
     if len(tok) > 40:
         try:
             with open(CLAUDE_TOKEN_FILE, "w") as f:
