@@ -72,8 +72,19 @@ CLAUDE_TOKEN_FILE = os.path.join(os.path.expanduser("~"), ".bandwidth-claude-tok
 
 def _claude_env():
     """Environment for spawned `claude` calls — injects the client's stored OAuth token
-    (from `claude setup-token`) so actions run on THEIR subscription, no systemd env needed."""
+    (from `claude setup-token`) so actions run on THEIR subscription, no systemd env needed.
+
+    CRITICAL: strip the parent's IDE / nested-session variables first. If the board is
+    started from inside a VS Code + Claude Code terminal, os.environ carries
+    CLAUDE_CODE_SSE_PORT / VSCODE_* / CLAUDECODE etc. A spawned `claude` that inherits
+    those AUTO-ATTACHES to the running VS Code extension — it opens new tabs/instances in
+    the editor and the headless `-p` run hangs on the IDE handshake until it times out
+    (600s), so the draft/action never completes. We want a clean, standalone headless run."""
     env = os.environ.copy()
+    for k in list(env):
+        if k.startswith("VSCODE") or k.startswith("CLAUDE_CODE") or k in (
+                "CLAUDECODE", "ENABLE_IDE_INTEGRATION", "TERM_PROGRAM", "TERM_PROGRAM_VERSION"):
+            env.pop(k, None)
     try:
         t = open(CLAUDE_TOKEN_FILE).read().strip()
         if t:

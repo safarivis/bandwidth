@@ -496,7 +496,7 @@ function openPanel(folder){
     +["","critical","high","medium","low"].map(v=>`<option value="${v}" ${(it.criticality||"")===v?"selected":""}>${v?v[0].toUpperCase()+v.slice(1):"— none"}</option>`).join("")
     +`</select></label>`;
   const WR=STATE.wait_reasons||{}, openW=it.wait&&it.wait.open;
-  const waitSel=`<label class="critsel">Waiting on <select onchange="setWait('${it.key}',this.value,${JSON.stringify(openW?openW.since:'')})">`
+  const waitSel=`<label class="critsel">Waiting on <select onchange="setWait('${it.key}',this.value,'${openW?openW.since:''}')">`
     +`<option value="">— not waiting</option>`
     +Object.keys(WR).map(r=>`<option value="${r}" ${openW&&openW.reason===r?"selected":""}>${esc(WR[r])}</option>`).join("")
     +`</select></label>`
