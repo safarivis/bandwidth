@@ -498,7 +498,24 @@ def read_activity(status_file):
 
 
 WAIT_REASONS = {"approval": "Awaiting approval", "reply": "Awaiting reply",
-                "access": "Access / tech setup", "data": "Client input / data"}
+                "access": "Access / tech setup", "data": "Client input / data",
+                "other": "Other / unclassified"}
+
+
+def _classify_reason(text):
+    """Bucket a blocker/wait line into a delay reason."""
+    t = (text or "").lower()
+    if any(w in t for w in ("approv", "sign-off", "signoff", "sign off", " po ", "rudi", "decision", "panel")):
+        return "approval"
+    if any(w in t for w in ("access", "api key", "credential", "creds", "provision", "iam",
+                            "login", "setup", "account", " key ")):
+        return "access"
+    if any(w in t for w in ("dataset", " data", "data ", "sheet", "input", "provide", "export", "info", "numbers")):
+        return "data"
+    if any(w in t for w in ("reply", "respond", "await", "waiting", "chase", "confirm",
+                            "revert", "feedback", "response", "come back")):
+        return "reply"
+    return "other"
 
 
 def _days_between(a, b):
@@ -534,14 +551,38 @@ def wait_metrics(status_file):
     return {"by": by, "total": total, "open": open_w}
 
 
+def derive_delay(item):
+    """Delay for ONE item. Explicit 'Waiting on' markers win; otherwise auto-derive
+    from the current blocker (its leading date = start, its text = reason). So EVERY
+    blocked UC/NI feeds the delays overview without manual tagging."""
+    wm = wait_metrics(item.get("status_file"))
+    if wm["total"] or wm["open"]:
+        return wm
+    b = item.get("blocker")
+    m = re.search(r"(\d{4}-\d{2}-\d{2})", b) if b else None
+    if not m:
+        return {"by": {}, "total": 0, "open": None}
+    since, reason = m.group(1), _classify_reason(b)
+    days = _days_between(since, datetime.now(timezone.utc).strftime("%Y-%m-%d"))
+    return {"by": {reason: days}, "total": days, "auto": True,
+            "open": {"reason": reason, "since": since, "days": days}}
+
+
 def _aggregate_delays(items):
-    by, total = {}, 0
+    """Programme-wide delay summary: per reason -> total days, item count, avg."""
+    by = {}
     for i in items:
-        w = i.get("wait") or {}
-        for r, d in (w.get("by") or {}).items():
-            by[r] = by.get(r, 0) + d
-        total += w.get("total", 0)
-    return {"by": by, "total": total, "top": (max(by, key=by.get) if by else None)}
+        for r, d in ((i.get("wait") or {}).get("by") or {}).items():
+            e = by.setdefault(r, {"days": 0, "count": 0})
+            e["days"] += d
+            e["count"] += 1
+    for e in by.values():
+        e["avg"] = round(e["days"] / e["count"], 1) if e["count"] else 0
+    total = sum(e["days"] for e in by.values())
+    n = sum(e["count"] for e in by.values())
+    return {"by": by, "total": total, "count": n,
+            "avg": round(total / n, 1) if n else 0,
+            "top": (max(by, key=lambda r: by[r]["days"]) if by else None)}
 
 
 # ------------------------- state builder -------------------------
@@ -601,7 +642,7 @@ def build_state():
         else:
             item["health"] = "grey"
         item["flags"] += register_flags(item)
-        item["wait"] = wait_metrics(item.get("status_file"))
+        item["wait"] = derive_delay(item)
         # Risk = how-bad-it-is-now (health) × how-much-it-matters (criticality)
         sev = {"red": 3, "amber": 2, "grey": 1, "green": 0}.get(item["health"], 0)
         cw = {"critical": 4, "high": 3, "medium": 2, "low": 1}.get(item.get("criticality") or "", 1)

@@ -126,7 +126,8 @@
   .rbl{color:var(--txt)}
   .ract{flex-shrink:0}
   .delaybars{display:flex;flex-direction:column;gap:10px}
-  .dbar{display:grid;grid-template-columns:150px 1fr 48px;align-items:center;gap:10px}
+  .dbar{display:grid;grid-template-columns:140px 1fr 44px 150px;align-items:center;gap:10px}
+  .davg{text-align:right}
   .dbl{font-size:13px;color:var(--dim)}
   .dtrack{background:var(--panel2);border-radius:980px;height:10px;overflow:hidden}
   .dfill{background:var(--amber);height:100%;border-radius:980px;min-width:2px}
@@ -305,20 +306,24 @@ function paint(){
   else if(VIEW==="delays") paintDelays(); else paintKanban();
 }
 function paintDelays(){
-  const d=STATE.delays||{by:{},total:0}, WR=STATE.wait_reasons||{};
-  const max=Math.max(1,...Object.values(d.by||{}));
-  const bars=Object.keys(WR).map(r=>{const v=(d.by||{})[r]||0;
-    return `<div class="dbar"><div class="dbl">${esc(WR[r])}</div><div class="dtrack"><div class="dfill" style="width:${Math.round(v/max*100)}%"></div></div><div class="dval">${v}d</div></div>`;}).join("");
+  const d=STATE.delays||{by:{},total:0,avg:0,count:0}, WR=STATE.wait_reasons||{};
+  const reasons=[...new Set([...Object.keys(WR),...Object.keys(d.by||{})])];
+  const max=Math.max(1,...reasons.map(r=>((d.by||{})[r]||{}).days||0));
+  const bars=reasons.map(r=>{const e=(d.by||{})[r]||{days:0,count:0,avg:0};
+    return `<div class="dbar"><div class="dbl">${esc(WR[r]||r)}</div>`
+      +`<div class="dtrack"><div class="dfill" style="width:${Math.round((e.days||0)/max*100)}%"></div></div>`
+      +`<div class="dval">${e.days||0}d</div>`
+      +`<div class="davg tiny muted">avg ${e.avg||0}d · ${e.count||0} item${e.count===1?"":"s"}</div></div>`;}).join("");
   const items=shownItems().filter(i=>i.wait&&i.wait.total>0).sort((a,b)=>(b.wait.total||0)-(a.wait.total||0));
   const rows=items.map(i=>{const o=i.wait.open;
     return `<div class="rrow ${i.health}" data-k="${esc(i.key)}"><div class="rmain" onclick='openPanel(${JSON.stringify(i.key)})'>
       <div class="rtop"><b>${esc(i.name)}</b> <span class="rcode">${esc(i.code||"")}</span>${o?`<span class="crit-chip">⏳ ${esc(WR[o.reason]||o.reason)} ${o.days}d</span>`:""}</div>
       <div class="rsub">${Object.entries(i.wait.by).map(([r,dd])=>`${esc(WR[r]||r)}: ${dd}d`).join(" · ")} · <b>total ${i.wait.total}d</b></div></div></div>`;}).join("")
-    ||'<div class="tiny muted">No waiting time recorded yet. Open a block and set "Waiting on…" to start measuring delays.</div>';
+    ||'<div class="tiny muted">No delays yet. A delay auto-appears when a UC/NI is blocked (measured from its blocker date), or when you set "Waiting on…" in a block.</div>';
   main.innerHTML=`<div class="report">
-    <p class="tiny muted" style="text-align:center;margin:0 0 18px">Where time goes — <b>${d.total}d</b> waiting total${d.top?`, most on <b>${esc(WR[d.top]||d.top)}</b>`:""}.</p>
-    <div class="rsec"><h3>Time lost by cause</h3><div class="delaybars">${bars}</div></div>
-    <div class="rsec"><h3>By project</h3>${rows}</div>
+    <p class="tiny muted" style="text-align:center;margin:0 0 18px"><b>${d.count}</b> delayed item${d.count===1?"":"s"} · avg wait <b>${d.avg}d</b>${d.top?` · biggest drag <b>${esc(WR[d.top]||d.top)}</b>`:""}</p>
+    <div class="rsec"><h3>Average wait by cause</h3><div class="delaybars">${bars}</div></div>
+    <div class="rsec"><h3>By project (${items.length})</h3>${rows}</div>
   </div>`;
   applyActMarkers();
 }
