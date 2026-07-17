@@ -236,35 +236,58 @@ def loop_health(item):
     return verdict
 
 
-def find_blocker(item, action_items_text):
-    """Most recent OPEN blocker line in ACTION-ITEMS for this initiative, else None.
-
-    Deliberately conservative to avoid false reds: matches on the initiative CODE
-    only (fuzzy name matching produced wrong hits), requires a blocker marker, and
-    skips any line already marked done/decided/resolved.
-    """
-    code = item.get("code")
-    if not action_items_text or not code:
+def _scan_blocker(text, code, require_code):
+    """Most recent OPEN blocker line in `text`. Skips done/cross-cutting lines. If
+    require_code, the line's PRIMARY (first) code must equal this initiative's code."""
+    if not text:
         return None
     markers = ("blocked", "waiting", "awaiting", "pending", "⏳", "stalled")
     done = ("✅", "done", "decided", "resolved", "complete", "sent 2026", "closed")
-    # cross-cutting / improvement notes that merely MENTION the code are not blockers
     noise = ("pattern", "generalis", "worth folding", "apply to", "standard", "retro-fit",
              "not just", "etc.", "consider ")
     match = None
-    for line in action_items_text.splitlines():
+    for line in text.splitlines():
         low = line.lower()
         if not any(m in low for m in markers):
             continue
         if any(d in low for d in done) or any(nz in low for nz in noise):
             continue
-        # A blocker counts ONLY for the project that is the PRIMARY (first) code on the
-        # line - stops lines about project A that merely reference B from flagging B.
-        first = CODE_RE.search(line)
-        if not first or first.group(0).upper() != code.upper():
-            continue
-        match = line.strip().strip("|").strip()[:300]  # keep last = most recent
+        if require_code:
+            first = CODE_RE.search(line)
+            if not first or not code or first.group(0).upper() != code.upper():
+                continue
+        match = line.strip().strip("|").strip()[:300]   # keep last = most recent
     return match
+
+
+def _read_room_action_items(item):
+    """Concatenate any ACTION-ITEMS*.md inside THIS initiative's own folder/room."""
+    base = os.path.join(REPO_ROOT, item.get("client_dir", ""), item.get("folder", ""))
+    if not os.path.isdir(base):
+        return ""
+    parts = []
+    for f in glob.glob(os.path.join(base, "**", "ACTION-ITEMS*.md"), recursive=True):
+        try:
+            parts.append(open(f, errors="ignore").read())
+        except Exception:
+            pass
+    return "\n".join(parts)
+
+
+def find_blocker(item, ai_text):
+    """Open blocker for this initiative — checked in the CLIENT-level ACTION-ITEMS
+    (code-matched) AND the initiative's OWN room ACTION-ITEMS, so work logged in a
+    use-case's own folder surfaces on its block. A folder with only one initiative
+    lets any open blocker count; a shared folder still requires the code."""
+    code = item.get("code")
+    if code:
+        b = _scan_blocker(ai_text, code, require_code=True)
+        if b:
+            return b
+    room = _read_room_action_items(item)
+    if room:
+        return _scan_blocker(room, code, require_code=not item.get("_solo_folder"))
+    return None
 
 
 def days_since(iso_or_date):
@@ -525,6 +548,10 @@ def build_state():
         data = json.load(f)
     client_dir = os.environ.get("BOARD_CLIENT_DIR") or data["client_dir"]
     registry = load_registry()
+    folder_counts = {}
+    for r in registry:
+        fld = os.path.relpath(r["repo_path"], client_dir).split(os.sep)[0]
+        folder_counts[fld] = folder_counts.get(fld, 0) + 1
 
     # ACTION-ITEMS + email scan freshness (read once)
     ai_path = os.path.join(REPO_ROOT, client_dir, "docs", "ACTION-ITEMS.md")
@@ -550,6 +577,10 @@ def build_state():
         item["days_since_movement"] = days
         item["recent_commits"] = commits
         item["blocker"] = find_blocker(item, ai_text)
+        # A LIVE/delivered agent isn't "blocked" by old build-time ACTION-ITEMS lines —
+        # its real health comes from loop-health + git movement. Drop stale blockers.
+        if item.get("stage") == "live":
+            item["blocker"] = None
         lh = loop_health(item)
         item["loop_health"] = lh
         if days is not None and days > STALE_MOVE_DAYS:
@@ -590,6 +621,7 @@ def build_state():
             "contact": reg.get("contact") or reg.get("sponsor"), "dept": reg.get("dept"),
             "what_it_does": reg.get("what_it_does"), "why_it_matters": reg.get("why_it_matters"),
             "repo_path": repo_path, "status_file": status_file, "flags": [],
+            "_solo_folder": folder_counts.get(room_folder, 1) == 1,
         }
         sf = os.path.join(REPO_ROOT, status_file)
         if os.path.exists(sf):
@@ -620,6 +652,7 @@ def build_state():
             "stage": stage, "status_date": sdate, "status_text": stext,
             "flags": ["unregistered"] + ([] if stage != "unknown" else
                                          ["no-stage-word" if stext else "no-status-line"]),
+            "_solo_folder": True,
         }
         item["activity"] = read_activity(item["status_file"])
         item["priority"] = is_priority(item["status_file"])
