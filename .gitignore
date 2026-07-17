@@ -3,3 +3,4 @@ server.log
 __pycache__/
 BOARD.md
 data/
+.deploy.env
